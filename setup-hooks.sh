@@ -40,3 +40,4 @@ echo "Pre-commit hook installed successfully!"
 echo "The hook will now run black, flake8, and mypy on staged Python files before each commit."
 
 
+
