@@ -1,43 +1,66 @@
 #!/bin/bash
 
-# Script to install git pre-commit hooks
+# Pre-commit hook to run black, flake8, and mypy on staged Python files
 
 set -e
 
-HOOKS_DIR=".githooks"
-GIT_HOOKS_DIR=".git/hooks"
-PRE_COMMIT_HOOK="pre-commit"
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
 
-# Check if .githooks directory exists
-if [ ! -d "$HOOKS_DIR" ]; then
-    echo "Error: $HOOKS_DIR directory not found!"
+# Try to find and activate virtual environment
+if [ -d "venv" ]; then
+    source venv/bin/activate
+elif [ -d ".venv" ]; then
+    source .venv/bin/activate
+fi
+
+# Get list of staged Python files
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.py$' || true)
+
+# If no Python files are staged, exit successfully
+if [ -z "$STAGED_FILES" ]; then
+    exit 0
+fi
+
+echo -e "${GREEN}Running pre-commit checks on staged Python files...${NC}"
+
+# Check if tools are installed
+command -v black >/dev/null 2>&1 || { echo -e "${RED}Error: black is not installed. Install it with: pip install black${NC}" >&2; exit 1; }
+command -v flake8 >/dev/null 2>&1 || { echo -e "${RED}Error: flake8 is not installed. Install it with: pip install flake8${NC}" >&2; exit 1; }
+command -v mypy >/dev/null 2>&1 || { echo -e "${RED}Error: mypy is not installed. Install it with: pip install mypy${NC}" >&2; exit 1; }
+
+# Track if any checks fail
+FAILED=0
+
+# Run black in check mode
+echo -e "${YELLOW}Running black...${NC}"
+if ! black --check $STAGED_FILES; then
+    echo -e "${RED}Black check failed. Please run 'black' to format your code.${NC}"
+    FAILED=1
+fi
+
+# Run flake8
+echo -e "${YELLOW}Running flake8...${NC}"
+if ! flake8 $STAGED_FILES; then
+    echo -e "${RED}Flake8 check failed. Please fix the linting errors.${NC}"
+    FAILED=1
+fi
+
+# Run mypy
+echo -e "${YELLOW}Running mypy...${NC}"
+if ! mypy $STAGED_FILES; then
+    echo -e "${RED}Mypy check failed. Please fix the type errors.${NC}"
+    FAILED=1
+fi
+
+# Exit with error if any check failed
+if [ $FAILED -eq 1 ]; then
+    echo -e "${RED}Pre-commit checks failed. Please fix the errors above before committing.${NC}"
     exit 1
 fi
 
-# Check if pre-commit hook exists
-if [ ! -f "$HOOKS_DIR/$PRE_COMMIT_HOOK" ]; then
-    echo "Error: $HOOKS_DIR/$PRE_COMMIT_HOOK not found!"
-    exit 1
-fi
-
-# Check if .git directory exists
-if [ ! -d ".git" ]; then
-    echo "Error: .git directory not found! Are you in a git repository?"
-    exit 1
-fi
-
-# Create .git/hooks directory if it doesn't exist
-mkdir -p "$GIT_HOOKS_DIR"
-
-# Copy the pre-commit hook
-echo "Installing pre-commit hook..."
-cp "$HOOKS_DIR/$PRE_COMMIT_HOOK" "$GIT_HOOKS_DIR/$PRE_COMMIT_HOOK"
-
-# Make the hook executable
-chmod +x "$GIT_HOOKS_DIR/$PRE_COMMIT_HOOK"
-
-echo "Pre-commit hook installed successfully!"
-echo "The hook will now run black, flake8, and mypy on staged Python files before each commit."
-
-
-
+echo -e "${GREEN}All pre-commit checks passed!${NC}"
+exit 0
