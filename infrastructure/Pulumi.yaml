@@ -1,0 +1,7 @@
+name: mini-idp
+runtime:
+  name: python
+  options:
+    virtualenv: venv
+description: GKE cluster infrastructure for mini-idp
+

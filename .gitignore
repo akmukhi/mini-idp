@@ -1,0 +1,105 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+venv/
+.venv/
+ENV/
+env/
+
+# Pulumi - SENSITIVE: Contains secrets and state
+.pulumi/
+Pulumi.*.yaml
+!Pulumi.yaml
+*.pulumi.json
+
+# Infrastructure secrets and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+*-key.json
+*credentials.json
+service-account*.json
+gcp-key*.json
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kubernetes
+kubeconfig
+kubeconfig.*
+*.kubeconfig
+
+# Terraform (if used)
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Local configuration
+config.local.*
+local.yaml
+local.yml
+
+# Secrets directory
+secrets/
+.secrets/
+
+# Test files with sensitive data
+testconfig.py
+*test*.yaml
+*test*.yml
+
