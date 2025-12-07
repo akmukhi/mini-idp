@@ -119,6 +119,23 @@ spec:
     name: {{ name }}
   minReplicas: {{ min_replicas | default(1) }}
   maxReplicas: {{ max_replicas | default(10) }}
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: {{ hpa_scale_down_stabilization | default(300) }}
+      policies:
+      - type: Percent
+        value: {{ hpa_scale_down_percent | default(50) }}
+        periodSeconds: {{ hpa_scale_down_period | default(60) }}
+    scaleUp:
+      stabilizationWindowSeconds: {{ hpa_scale_up_stabilization | default(0) }}
+      policies:
+      - type: Percent
+        value: {{ hpa_scale_up_percent | default(100) }}
+        periodSeconds: {{ hpa_scale_up_period | default(15) }}
+      - type: Pods
+        value: {{ hpa_scale_up_pods | default(4) }}
+        periodSeconds: {{ hpa_scale_up_period | default(15) }}
+      selectPolicy: Max
   metrics:
   - type: Resource
     resource:

@@ -12,6 +12,63 @@ from lib.k8s_client import K8sClient
 from lib.template_builder import TemplateBuilder
 
 
+def _calculate_hpa_defaults(
+    type: str, replicas: int, min_replicas: Optional[int], max_replicas: Optional[int]
+) -> tuple[int, int]:
+    """
+    Calculate sensible HPA defaults based on deployment type and replicas.
+
+    Args:
+        type: Deployment type (service, worker)
+        replicas: Initial number of replicas
+        min_replicas: User-specified min replicas (None if not specified)
+        max_replicas: User-specified max replicas (None if not specified)
+
+    Returns:
+        Tuple of (min_replicas, max_replicas)
+    """
+    # Calculate min_replicas
+    if min_replicas is not None:
+        calculated_min = min_replicas
+    else:
+        # For production workloads, min should allow for rolling updates
+        if replicas > 1:
+            # Min should be at least 50% of replicas, but at least 1
+            calculated_min = max(1, replicas // 2)
+        else:
+            calculated_min = 1
+
+    # Calculate max_replicas
+    if max_replicas is not None:
+        calculated_max = max_replicas
+    else:
+        # Max should be at least 2x replicas for burst capacity
+        # For services, use 3x; for workers, use 2x
+        multiplier = 3 if type == "service" else 2
+        calculated_max = max(10, replicas * multiplier)
+
+    # Ensure min <= max
+    if calculated_min > calculated_max:
+        calculated_max = calculated_min * 2
+
+    return calculated_min, calculated_max
+
+
+def _get_cpu_target_default(type: str) -> int:
+    """
+    Get default CPU target based on deployment type.
+
+    Args:
+        type: Deployment type (service, worker)
+
+    Returns:
+        Default CPU target percentage
+    """
+    # Services: 70% (balanced)
+    # Workers: 60% (more aggressive scaling for queue processing)
+    return 60 if type == "worker" else 70
+
+
 def _build_resources(
     template_builder: TemplateBuilder,
     type: str,
@@ -24,9 +81,9 @@ def _build_resources(
     env: tuple,
     secret: tuple,
     autoscaling: bool,
-    min_replicas: int,
-    max_replicas: int,
-    cpu_target: int,
+    min_replicas: Optional[int],
+    max_replicas: Optional[int],
+    cpu_target: Optional[int],
     memory_target: Optional[int],
     metrics: bool,
 ) -> List[dict]:
@@ -335,20 +392,20 @@ def _deploy_gitops(
 @click.option(
     "--min-replicas",
     type=int,
-    default=1,
-    help="Minimum replicas for autoscaling (default: 1)",
+    default=None,
+    help="Minimum replicas for autoscaling (auto-calculated if not specified)",
 )
 @click.option(
     "--max-replicas",
     type=int,
-    default=10,
-    help="Maximum replicas for autoscaling (default: 10)",
+    default=None,
+    help="Maximum replicas for autoscaling (auto-calculated if not specified)",
 )
 @click.option(
     "--cpu-target",
     type=int,
-    default=70,
-    help="CPU target percentage for autoscaling (default: 70)",
+    default=None,
+    help="CPU target percentage for autoscaling (70% for services, 60% for workers)",
 )
 @click.option(
     "--memory-target",
@@ -443,6 +500,27 @@ def deploy(
     namespace = namespace or config.get("default_namespace", "default")
     kubeconfig = ctx.obj.get("kubeconfig") or config.get("kubeconfig")
 
+    # Calculate automatic HPA defaults if autoscaling is enabled
+    if autoscaling and type != "job":
+        calculated_min, calculated_max = _calculate_hpa_defaults(
+            type=type,
+            replicas=replicas,
+            min_replicas=min_replicas,
+            max_replicas=max_replicas,
+        )
+        # Use calculated values if user didn't specify custom ones
+        final_min_replicas = min_replicas if min_replicas is not None else calculated_min
+        final_max_replicas = max_replicas if max_replicas is not None else calculated_max
+        # Use type-specific CPU target if not explicitly set
+        final_cpu_target = (
+            cpu_target if cpu_target is not None else _get_cpu_target_default(type)
+        )
+    else:
+        # Use defaults if not specified
+        final_min_replicas = min_replicas if min_replicas is not None else 1
+        final_max_replicas = max_replicas if max_replicas is not None else 10
+        final_cpu_target = cpu_target if cpu_target is not None else 70
+
     # Build resources
     resources = _build_and_validate_resources(
         config=config,
@@ -456,15 +534,19 @@ def deploy(
         env=env,
         secret=secret,
         autoscaling=autoscaling,
-        min_replicas=min_replicas,
-        max_replicas=max_replicas,
-        cpu_target=cpu_target,
+        min_replicas=final_min_replicas,
+        max_replicas=final_max_replicas,
+        cpu_target=final_cpu_target,
         memory_target=memory_target,
         metrics=metrics,
     )
 
-    # Display info
-    _display_deployment_info(type, name, namespace, image, port, replicas, resources)
+    # Display info (show calculated HPA values if autoscaling is enabled)
+    _display_deployment_info(
+        type, name, namespace, image, port, replicas, resources
+    )
+    if autoscaling and type != "job":
+        click.echo(f"  Autoscaling: min={final_min_replicas}, max={final_max_replicas}, cpu={final_cpu_target}%")
 
     # Handle dry-run
     if dry_run:
