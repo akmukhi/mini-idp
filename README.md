@@ -1,6 +1,6 @@
 # Mini-IDP
 
-A CLI and web UI that deploys applications to Kubernetes with **no YAML required**. Deploy services, jobs, and workers using simple templates with built-in best practices for autoscaling, logging, metrics, secrets, and GitOps.
+A CLI and REST API that deploys applications to Kubernetes with **no YAML required**. Deploy services, jobs, and workers using simple templates with built-in best practices for autoscaling, logging, metrics, secrets, and GitOps.
 
 ## Overview
 
@@ -339,6 +339,8 @@ Pre-commit hooks automatically run:
 
 ## Documentation
 
+- [Web Service](docs/web-service.md) - FastAPI web service for deployments
+- [API Reference](docs/api-reference.md) - Complete REST API documentation
 - [Automatic HPA Generation](docs/automatic-hpa.md) - How automatic HPA defaults work
 - [Fluent Bit Integration](docs/fluent-bit-integration.md) - Automatic log collection
 - [Prometheus Metrics Integration](docs/prometheus-metrics.md) - Automatic metrics collection
