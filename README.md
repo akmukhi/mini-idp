@@ -107,9 +107,12 @@ mini-idp/
 │   ├── job/               # Job templates
 │   └── worker/            # Worker templates
 ├── docs/                   # Documentation
-│   ├── gke-infrastructure.md
-│   ├── k8s-components.md
-│   └── k8s-components-testing.md
+│   ├── automatic-hpa.md          # Automatic HPA generation guide
+│   ├── gke-infrastructure.md     # GKE cluster setup
+│   ├── k8s-components.md          # Kubernetes components
+│   ├── k8s-components-testing.md  # Component testing guide
+│   ├── pre-commit-hooks.md        # Pre-commit hooks setup
+│   └── security-gitignore.md      # Security and gitignore guide
 └── tests/                  # Test suite
 ```
 
@@ -237,9 +240,12 @@ mini-idp deploy --template job/python-scheduled \
 ### Autoscaling
 
 All deployments automatically include:
-- Horizontal Pod Autoscaler (HPA)
-- Resource requests and limits
-- Default scaling policies
+- **Automatic HPA Generation**: Intelligent min/max replica calculation based on deployment type
+- **Type-Specific Defaults**: Services (70% CPU) and Workers (60% CPU) with optimized targets
+- **Scaling Behavior**: Configured scale-up/down policies for stable operation
+- **Resource Requests**: Automatic resource requests and limits
+
+See [Automatic HPA Documentation](docs/automatic-hpa.md) for detailed information on how HPA defaults are calculated and how to customize them.
 
 ### Logging
 
@@ -317,10 +323,11 @@ Pre-commit hooks automatically run:
 
 ## Documentation
 
-- [GKE Infrastructure Setup](docs/gke-infrastructure.md)
-- [Kubernetes Components Guide](docs/k8s-components.md)
-- [Testing Guide](docs/k8s-components-testing.md)
-- [Security and GitIgnore](docs/security-gitignore.md)
+- [Automatic HPA Generation](docs/automatic-hpa.md) - How automatic HPA defaults work
+- [GKE Infrastructure Setup](docs/gke-infrastructure.md) - Setting up GKE clusters
+- [Kubernetes Components Guide](docs/k8s-components.md) - ArgoCD, Prometheus, etc.
+- [Testing Guide](docs/k8s-components-testing.md) - Testing Kubernetes components
+- [Security and GitIgnore](docs/security-gitignore.md) - Security best practices
 
 ## Roadmap
 
