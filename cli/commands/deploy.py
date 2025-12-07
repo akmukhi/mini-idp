@@ -89,6 +89,8 @@ def _build_resources(
     metrics_path: str = "/metrics",
     metrics_port: Optional[str] = None,
     metrics_interval: str = "30s",
+    logging: bool = True,
+    logging_environment: Optional[str] = None,
 ) -> List[dict]:
     """
     Build Kubernetes resources from template.
@@ -397,7 +399,22 @@ def _deploy_gitops(
     "--secret",
     "-s",
     multiple=True,
-    help="Secret references (format: SECRET_NAME:KEY)",
+    help="Secret references (format: SECRET_NAME:KEY or K8S_SECRET:GCP_SECRET:KEY)",
+)
+@click.option(
+    "--external-secret",
+    multiple=True,
+    help="External Secret from GCP Secret Manager (format: GCP_SECRET_NAME:K8S_SECRET_KEY or GCP_SECRET_NAME)",
+)
+@click.option(
+    "--secret-store",
+    default="gcp-secret-store",
+    help="SecretStore name for External Secrets (default: gcp-secret-store)",
+)
+@click.option(
+    "--secret-refresh-interval",
+    default="1h",
+    help="External Secret refresh interval (default: 1h)",
 )
 @click.option(
     "--autoscaling/--no-autoscaling",
@@ -486,6 +503,9 @@ def deploy(
     template,
     env,
     secret,
+    external_secret,
+    secret_store,
+    secret_refresh_interval,
     autoscaling,
     min_replicas,
     max_replicas,
@@ -579,6 +599,9 @@ def deploy(
         template=template,
         env=env,
         secret=secret,
+        external_secret=external_secret,
+        secret_store=secret_store,
+        secret_refresh_interval=secret_refresh_interval,
         autoscaling=autoscaling,
         min_replicas=final_min_replicas,
         max_replicas=final_max_replicas,
@@ -647,13 +670,16 @@ def _build_and_validate_resources(
     metrics_interval: str = "30s",
     logging: bool = True,
     logging_environment: Optional[str] = None,
+    external_secret: tuple = (),
+    secret_store: str = "gcp-secret-store",
+    secret_refresh_interval: str = "1h",
 ) -> List[dict]:
     """Build and validate resources from template."""
     templates_dir = config.get("templates_dir")
     template_builder = TemplateBuilder(template_dir=templates_dir)
 
     try:
-        return _build_resources(
+        resources = _build_resources(
             template_builder=template_builder,
             type=type,
             name=name,
@@ -670,9 +696,40 @@ def _build_and_validate_resources(
             cpu_target=cpu_target,
             memory_target=memory_target,
             metrics=metrics,
+            metrics_path=metrics_path,
+            metrics_port=metrics_port,
+            metrics_interval=metrics_interval,
             logging=logging,
             logging_environment=logging_environment,
         )
+
+        # Add ExternalSecret resources if specified
+        if external_secret:
+            from lib.secrets import build_external_secret
+
+            for ext_secret in external_secret:
+                # Parse format: GCP_SECRET_NAME:K8S_SECRET_KEY or GCP_SECRET_NAME
+                if ":" in ext_secret:
+                    gcp_secret, k8s_key = ext_secret.split(":", 1)
+                else:
+                    gcp_secret = ext_secret
+                    k8s_key = None
+
+                # Create ExternalSecret name from app name and secret name
+                ext_secret_name = f"{name}-{gcp_secret.replace('_', '-').lower()}"
+
+                externalsecret = build_external_secret(
+                    name=ext_secret_name,
+                    namespace=namespace,
+                    secret_store=secret_store,
+                    secret_name=gcp_secret,
+                    secret_key=k8s_key,
+                    refresh_interval=secret_refresh_interval,
+                    target_secret_name=f"{name}-secrets",
+                )
+                resources.append(externalsecret)
+
+        return resources
     except Exception as e:
         click.echo(f"Error building resources: {e}", err=True)
         sys.exit(1)

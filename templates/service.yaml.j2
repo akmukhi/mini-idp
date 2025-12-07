@@ -60,7 +60,7 @@ spec:
 {% elif env.secret %}
           valueFrom:
             secretKeyRef:
-              name: {{ env.secret }}
+              name: {{ env.secret | default(name + '-secrets') }}
               key: {{ env.key | default(env.name) }}
 {% endif %}
 {% endfor %}

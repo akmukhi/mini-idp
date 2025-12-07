@@ -267,9 +267,13 @@ See [Prometheus Metrics Integration Documentation](docs/prometheus-metrics.md) f
 
 ### Secrets
 
-- Integration with GCP Secret Manager
-- Automatic secret injection via External Secrets Operator
-- Workload Identity for secure access
+- **Automatic ExternalSecret Generation**: ExternalSecret resources created automatically
+- **GCP Secret Manager Integration**: Sync secrets from Google Cloud Secret Manager
+- **Automatic Secret Injection**: Secrets automatically injected into pods
+- **Secure Authentication**: Uses Workload Identity for secure access
+- **Automatic Refresh**: Secrets refreshed automatically at configured intervals
+
+See [External Secrets Integration Documentation](docs/external-secrets-integration.md) for detailed information on secret management.
 
 ### GitOps
 
@@ -332,6 +336,7 @@ Pre-commit hooks automatically run:
 - [Automatic HPA Generation](docs/automatic-hpa.md) - How automatic HPA defaults work
 - [Fluent Bit Integration](docs/fluent-bit-integration.md) - Automatic log collection
 - [Prometheus Metrics Integration](docs/prometheus-metrics.md) - Automatic metrics collection
+- [External Secrets Integration](docs/external-secrets-integration.md) - Automatic secret injection
 - [GKE Infrastructure Setup](docs/gke-infrastructure.md) - Setting up GKE clusters
 - [Kubernetes Components Guide](docs/k8s-components.md) - ArgoCD, Prometheus, etc.
 - [Testing Guide](docs/k8s-components-testing.md) - Testing Kubernetes components
