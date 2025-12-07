@@ -310,11 +310,48 @@ def _apply_servicemonitor_resource(client, resource, resource_name, click_obj):
     click_obj.echo(f"  ✓ {result['action']} ServiceMonitor: {resource_name}")
 
 
+def _write_manifests_to_directory(
+    resources: List[dict],
+    output_dir: str,
+    name: str,
+    namespace: str,
+) -> None:
+    """
+    Write Kubernetes manifests to a directory.
+
+    Args:
+        resources: List of Kubernetes resource dictionaries
+        output_dir: Output directory path
+        name: Application name
+        namespace: Kubernetes namespace
+    """
+    import os
+    import yaml
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Write each resource to a file
+    for i, resource in enumerate(resources):
+        kind = resource.get("kind", "Unknown").lower()
+        resource_name = resource.get("metadata", {}).get("name", f"resource-{i}")
+        filename = f"{i:02d}-{kind}-{resource_name}.yaml"
+        filepath = os.path.join(output_dir, filename)
+
+        with open(filepath, "w") as f:
+            yaml.dump(resource, f, default_flow_style=False, sort_keys=False)
+
+
 def _deploy_gitops(
     name: str,
     namespace: str,
     git_repo: Optional[str],
     git_path: Optional[str],
+    git_branch: str,
+    argocd_project: str,
+    argocd_namespace: str,
+    auto_sync: bool,
+    prune: bool,
+    self_heal: bool,
     config: dict,
     client: K8sClient,
     click_obj,
@@ -327,6 +364,12 @@ def _deploy_gitops(
         namespace: Kubernetes namespace
         git_repo: Git repository URL
         git_path: Path in repository
+        git_branch: Git branch/tag/commit
+        argocd_project: ArgoCD project name
+        argocd_namespace: ArgoCD namespace
+        auto_sync: Enable automated sync
+        prune: Enable automatic pruning
+        self_heal: Enable self-healing
         config: CLI configuration
         client: Kubernetes client
         click_obj: Click context for output
@@ -339,14 +382,17 @@ def _deploy_gitops(
     if not git_path:
         git_path = "manifests"
 
-    argocd_namespace = config.get("argocd_namespace", "argocd")
-
     application = build_argocd_application(
         name=name,
         namespace=argocd_namespace,
         repo_url=git_repo,
         path=git_path,
-        target_revision="HEAD",
+        target_revision=git_branch,
+        destination_namespace=namespace,
+        project=argocd_project,
+        automated_sync=auto_sync,
+        prune=prune,
+        self_heal=self_heal,
     )
 
     # Convert to dict for custom resource API
@@ -357,6 +403,9 @@ def _deploy_gitops(
 
     result = client.apply_argocd_application(app_dict)
     click_obj.echo(f"  ✓ {result['action']} ArgoCD Application: {name}")
+    click_obj.echo(f"  Repository: {git_repo}")
+    click_obj.echo(f"  Path: {git_path}")
+    click_obj.echo(f"  Branch: {git_branch}")
 
 
 @click.command("deploy")
@@ -484,7 +533,42 @@ def _deploy_gitops(
 )
 @click.option(
     "--git-path",
-    help="Path in Git repository for GitOps deployment",
+    help="Path in Git repository for GitOps deployment (default: manifests)",
+)
+@click.option(
+    "--git-branch",
+    default="main",
+    help="Git branch/tag/commit for GitOps (default: main)",
+)
+@click.option(
+    "--argocd-project",
+    default="default",
+    help="ArgoCD project name (default: default)",
+)
+@click.option(
+    "--argocd-namespace",
+    default="argocd",
+    help="ArgoCD namespace (default: argocd)",
+)
+@click.option(
+    "--auto-sync/--no-auto-sync",
+    default=True,
+    help="Enable automated sync (default: enabled)",
+)
+@click.option(
+    "--prune/--no-prune",
+    default=True,
+    help="Enable automatic pruning (default: enabled)",
+)
+@click.option(
+    "--self-heal/--no-self-heal",
+    default=True,
+    help="Enable self-healing (default: enabled)",
+)
+@click.option(
+    "--write-manifests",
+    type=click.Path(dir_okay=True, file_okay=False),
+    help="Write manifests to directory instead of applying directly",
 )
 @click.option(
     "--dry-run",
@@ -520,6 +604,13 @@ def deploy(
     gitops,
     git_repo,
     git_path,
+    git_branch,
+    argocd_project,
+    argocd_namespace,
+    auto_sync,
+    prune,
+    self_heal,
+    write_manifests,
     dry_run,
 ):
     """
@@ -777,6 +868,12 @@ def _deploy_to_cluster(
     gitops: bool,
     git_repo: Optional[str],
     git_path: Optional[str],
+    git_branch: str,
+    argocd_project: str,
+    argocd_namespace: str,
+    auto_sync: bool,
+    prune: bool,
+    self_heal: bool,
     config: dict,
 ) -> None:
     """Deploy resources to cluster."""
@@ -795,6 +892,12 @@ def _deploy_to_cluster(
                 namespace=namespace,
                 git_repo=git_repo,
                 git_path=git_path,
+                git_branch=git_branch,
+                argocd_project=argocd_project,
+                argocd_namespace=argocd_namespace,
+                auto_sync=auto_sync,
+                prune=prune,
+                self_heal=self_heal,
                 config=config,
                 client=client,
                 click_obj=click,

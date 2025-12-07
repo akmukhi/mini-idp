@@ -277,7 +277,13 @@ See [External Secrets Integration Documentation](docs/external-secrets-integrati
 
 ### GitOps
 
-- ArgoCD integration
+- **Automatic ArgoCD Application Generation**: ArgoCD Application resources created automatically
+- **Git-Based Configuration**: All manifests stored in Git repositories
+- **Automatic Synchronization**: ArgoCD automatically syncs changes from Git
+- **Self-Healing**: ArgoCD automatically corrects drift from Git state
+- **Flexible Workflows**: Support for both direct deployment and manifest generation
+
+See [ArgoCD GitOps Integration Documentation](docs/argocd-gitops.md) for detailed information on GitOps workflows.
 - Automatic sync from Git repositories
 - Application health monitoring
 
@@ -337,6 +343,7 @@ Pre-commit hooks automatically run:
 - [Fluent Bit Integration](docs/fluent-bit-integration.md) - Automatic log collection
 - [Prometheus Metrics Integration](docs/prometheus-metrics.md) - Automatic metrics collection
 - [External Secrets Integration](docs/external-secrets-integration.md) - Automatic secret injection
+- [ArgoCD GitOps Integration](docs/argocd-gitops.md) - GitOps workflows with ArgoCD
 - [GKE Infrastructure Setup](docs/gke-infrastructure.md) - Setting up GKE clusters
 - [Kubernetes Components Guide](docs/k8s-components.md) - ArgoCD, Prometheus, etc.
 - [Testing Guide](docs/k8s-components-testing.md) - Testing Kubernetes components
