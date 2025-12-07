@@ -33,6 +33,23 @@ spec:
         app: {{ name }}
         type: worker
         managed-by: mini-idp
+{% if logging_enabled | default(True) %}
+        logging: enabled
+        logging.app: {{ name }}
+        logging.namespace: {{ namespace | default('default') }}
+{% if logging_environment %}
+        logging.environment: {{ logging_environment }}
+{% endif %}
+{% endif %}
+      annotations:
+{% if port %}
+        prometheus.io/scrape: "{{ metrics | default(True) | lower }}"
+        prometheus.io/port: "{{ port }}"
+        prometheus.io/path: "{{ metrics_path | default('/metrics') }}"
+{% endif %}
+{% if logging_enabled | default(True) %}
+        fluentbit.io/exclude: "false"
+{% endif %}
     spec:
       containers:
       - name: {{ name }}

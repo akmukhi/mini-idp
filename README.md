@@ -249,9 +249,12 @@ See [Automatic HPA Documentation](docs/automatic-hpa.md) for detailed informatio
 
 ### Logging
 
-- Automatic log collection via Fluent Bit
-- Forwarding to GCP Cloud Logging
-- Structured logging support
+- **Automatic Log Collection**: Fluent Bit automatically collects logs from all pods
+- **GCP Cloud Logging**: Logs are forwarded to Google Cloud Logging
+- **Structured Metadata**: Logs are tagged with app name, namespace, and environment
+- **Zero Configuration**: Enabled by default with sensible defaults
+
+See [Fluent Bit Integration Documentation](docs/fluent-bit-integration.md) for detailed information on log collection and viewing logs.
 
 ### Metrics
 
@@ -324,6 +327,7 @@ Pre-commit hooks automatically run:
 ## Documentation
 
 - [Automatic HPA Generation](docs/automatic-hpa.md) - How automatic HPA defaults work
+- [Fluent Bit Integration](docs/fluent-bit-integration.md) - Automatic log collection
 - [GKE Infrastructure Setup](docs/gke-infrastructure.md) - Setting up GKE clusters
 - [Kubernetes Components Guide](docs/k8s-components.md) - ArgoCD, Prometheus, etc.
 - [Testing Guide](docs/k8s-components-testing.md) - Testing Kubernetes components

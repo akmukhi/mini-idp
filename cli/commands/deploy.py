@@ -127,6 +127,8 @@ def _build_resources(
             cpu_target=cpu_target,
             memory_target=memory_target,
             metrics=metrics,
+            logging_enabled=logging,
+            logging_environment=logging_environment,
         )
     elif type == "job":
         resources = template_builder.build_job(
@@ -135,6 +137,8 @@ def _build_resources(
             namespace=namespace,
             env=list(env) if env else [],
             secret=list(secret) if secret else [],
+            logging_enabled=logging,
+            logging_environment=logging_environment,
         )
     elif type == "worker":
         resources = template_builder.build_worker(
@@ -150,6 +154,8 @@ def _build_resources(
             cpu_target=cpu_target,
             memory_target=memory_target,
             metrics=metrics,
+            logging_enabled=logging,
+            logging_environment=logging_environment,
         )
     else:
         raise ValueError(f"Unknown type: {type}")
@@ -419,6 +425,15 @@ def _deploy_gitops(
     help="Enable Prometheus metrics collection (default: enabled)",
 )
 @click.option(
+    "--logging/--no-logging",
+    default=True,
+    help="Enable Fluent Bit log collection (default: enabled)",
+)
+@click.option(
+    "--logging-environment",
+    help="Environment label for logs (e.g., production, staging)",
+)
+@click.option(
     "--gitops/--no-gitops",
     default=False,
     help="Deploy via ArgoCD GitOps (default: disabled)",
@@ -454,6 +469,8 @@ def deploy(
     cpu_target,
     memory_target,
     metrics,
+    logging,
+    logging_environment,
     gitops,
     git_repo,
     git_path,
@@ -539,6 +556,8 @@ def deploy(
         cpu_target=final_cpu_target,
         memory_target=memory_target,
         metrics=metrics,
+        logging=logging,
+        logging_environment=logging_environment,
     )
 
     # Display info (show calculated HPA values if autoscaling is enabled)
@@ -591,6 +610,8 @@ def _build_and_validate_resources(
     cpu_target: int,
     memory_target: Optional[int],
     metrics: bool,
+    logging: bool = True,
+    logging_environment: Optional[str] = None,
 ) -> List[dict]:
     """Build and validate resources from template."""
     templates_dir = config.get("templates_dir")
@@ -614,6 +635,8 @@ def _build_and_validate_resources(
             cpu_target=cpu_target,
             memory_target=memory_target,
             metrics=metrics,
+            logging=logging,
+            logging_environment=logging_environment,
         )
     except Exception as e:
         click.echo(f"Error building resources: {e}", err=True)
