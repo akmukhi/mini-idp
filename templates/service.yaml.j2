@@ -1,0 +1,157 @@
+# Service Template
+# Template for deploying stateless services (web apps, APIs)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ name }}
+  namespace: {{ namespace | default('default') }}
+  labels:
+    app: {{ name }}
+    type: service
+    managed-by: mini-idp
+{% if labels %}
+{% for key, value in labels.items() %}
+    {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}
+spec:
+  replicas: {{ replicas | default(1) }}
+  selector:
+    matchLabels:
+      app: {{ name }}
+  template:
+    metadata:
+      labels:
+        app: {{ name }}
+        type: service
+        managed-by: mini-idp
+    spec:
+      containers:
+      - name: {{ name }}
+        image: {{ image }}
+{% if port %}
+        ports:
+        - containerPort: {{ port }}
+          name: http
+          protocol: TCP
+{% endif %}
+{% if env_vars %}
+        env:
+{% for env in env_vars %}
+        - name: {{ env.name }}
+{% if env.value %}
+          value: {{ env.value | quote }}
+{% elif env.secret %}
+          valueFrom:
+            secretKeyRef:
+              name: {{ env.secret }}
+              key: {{ env.key | default(env.name) }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if resources %}
+        resources:
+{% if resources.requests %}
+          requests:
+{% for key, value in resources.requests.items() %}
+            {{ key }}: {{ value | quote }}
+{% endfor %}
+{% endif %}
+{% if resources.limits %}
+          limits:
+{% for key, value in resources.limits.items() %}
+            {{ key }}: {{ value | quote }}
+{% endfor %}
+{% endif %}
+{% endif %}
+{% if liveness_probe %}
+        livenessProbe:
+          httpGet:
+            path: {{ liveness_probe.path | default('/health') }}
+            port: {{ liveness_probe.port | default(port) }}
+          initialDelaySeconds: {{ liveness_probe.initial_delay | default(30) }}
+          periodSeconds: {{ liveness_probe.period | default(10) }}
+{% endif %}
+{% if readiness_probe %}
+        readinessProbe:
+          httpGet:
+            path: {{ readiness_probe.path | default('/ready') }}
+            port: {{ readiness_probe.port | default(port) }}
+          initialDelaySeconds: {{ readiness_probe.initial_delay | default(5) }}
+          periodSeconds: {{ readiness_probe.period | default(5) }}
+{% endif %}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ name }}
+  namespace: {{ namespace | default('default') }}
+  labels:
+    app: {{ name }}
+    type: service
+    managed-by: mini-idp
+spec:
+  type: {{ service_type | default('ClusterIP') }}
+  selector:
+    app: {{ name }}
+{% if port %}
+  ports:
+  - port: {{ port }}
+    targetPort: {{ target_port | default(port) }}
+    protocol: TCP
+    name: http
+{% endif %}
+{% if autoscaling %}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ name }}
+  namespace: {{ namespace | default('default') }}
+  labels:
+    app: {{ name }}
+    managed-by: mini-idp
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ name }}
+  minReplicas: {{ min_replicas | default(1) }}
+  maxReplicas: {{ max_replicas | default(10) }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ cpu_target | default(70) }}
+{% if memory_target %}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ memory_target | default(80) }}
+{% endif %}
+{% endif %}
+{% if metrics %}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ name }}
+  namespace: {{ namespace | default('default') }}
+  labels:
+    app: {{ name }}
+    managed-by: mini-idp
+spec:
+  selector:
+    matchLabels:
+      app: {{ name }}
+  endpoints:
+  - port: {{ metrics_port | default('http') }}
+    path: {{ metrics_path | default('/metrics') }}
+    interval: {{ metrics_interval | default('30s') }}
+{% endif %}
+

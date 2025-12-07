@@ -1,0 +1,166 @@
+# Worker Template
+# Template for deploying long-running worker processes (queue processors, background workers)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ name }}
+  namespace: {{ namespace | default('default') }}
+  labels:
+    app: {{ name }}
+    type: worker
+    managed-by: mini-idp
+{% if labels %}
+{% for key, value in labels.items() %}
+    {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}
+spec:
+  replicas: {{ replicas | default(1) }}
+  strategy:
+    type: {{ strategy | default('RollingUpdate') }}
+{% if strategy == 'RollingUpdate' %}
+    rollingUpdate:
+      maxSurge: {{ max_surge | default('25%') }}
+      maxUnavailable: {{ max_unavailable | default('25%') }}
+{% endif %}
+  selector:
+    matchLabels:
+      app: {{ name }}
+  template:
+    metadata:
+      labels:
+        app: {{ name }}
+        type: worker
+        managed-by: mini-idp
+    spec:
+      containers:
+      - name: {{ name }}
+        image: {{ image }}
+{% if port %}
+        ports:
+        - containerPort: {{ port }}
+          name: http
+          protocol: TCP
+{% endif %}
+{% if env_vars %}
+        env:
+{% for env in env_vars %}
+        - name: {{ env.name }}
+{% if env.value %}
+          value: {{ env.value | quote }}
+{% elif env.secret %}
+          valueFrom:
+            secretKeyRef:
+              name: {{ env.secret }}
+              key: {{ env.key | default(env.name) }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if command %}
+        command:
+{% for cmd in command %}
+        - {{ cmd | quote }}
+{% endfor %}
+{% endif %}
+{% if args %}
+        args:
+{% for arg in args %}
+        - {{ arg | quote }}
+{% endfor %}
+{% endif %}
+{% if resources %}
+        resources:
+{% if resources.requests %}
+          requests:
+{% for key, value in resources.requests.items() %}
+            {{ key }}: {{ value | quote }}
+{% endfor %}
+{% endif %}
+{% if resources.limits %}
+          limits:
+{% for key, value in resources.limits.items() %}
+            {{ key }}: {{ value | quote }}
+{% endfor %}
+{% endif %}
+{% endif %}
+{% if liveness_probe %}
+        livenessProbe:
+{% if liveness_probe.http_get %}
+          httpGet:
+            path: {{ liveness_probe.path | default('/health') }}
+            port: {{ liveness_probe.port | default(port) }}
+{% elif liveness_probe.exec %}
+          exec:
+            command:
+{% for cmd in liveness_probe.exec.command %}
+            - {{ cmd | quote }}
+{% endfor %}
+{% endif %}
+          initialDelaySeconds: {{ liveness_probe.initial_delay | default(30) }}
+          periodSeconds: {{ liveness_probe.period | default(10) }}
+          timeoutSeconds: {{ liveness_probe.timeout | default(5) }}
+          failureThreshold: {{ liveness_probe.failure_threshold | default(3) }}
+{% endif %}
+{% if autoscaling %}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ name }}
+  namespace: {{ namespace | default('default') }}
+  labels:
+    app: {{ name }}
+    managed-by: mini-idp
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ name }}
+  minReplicas: {{ min_replicas | default(1) }}
+  maxReplicas: {{ max_replicas | default(10) }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ cpu_target | default(70) }}
+{% if memory_target %}
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: {{ memory_target | default(80) }}
+{% endif %}
+{% if queue_length_metric %}
+  - type: External
+    external:
+      metric:
+        name: {{ queue_length_metric.name }}
+      target:
+        type: AverageValue
+        averageValue: {{ queue_length_metric.target }}
+{% endif %}
+{% endif %}
+{% if metrics %}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ name }}
+  namespace: {{ namespace | default('default') }}
+  labels:
+    app: {{ name }}
+    managed-by: mini-idp
+spec:
+  selector:
+    matchLabels:
+      app: {{ name }}
+  endpoints:
+  - port: {{ metrics_port | default('http') }}
+    path: {{ metrics_path | default('/metrics') }}
+    interval: {{ metrics_interval | default('30s') }}
+{% endif %}
+

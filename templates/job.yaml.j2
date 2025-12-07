@@ -1,0 +1,92 @@
+# Job Template
+# Template for deploying one-time or scheduled jobs
+---
+apiVersion: batch/v1
+kind: {{ job_type | default('Job') }}
+metadata:
+  name: {{ name }}
+  namespace: {{ namespace | default('default') }}
+  labels:
+    app: {{ name }}
+    type: job
+    managed-by: mini-idp
+{% if labels %}
+{% for key, value in labels.items() %}
+    {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}
+{% if job_type == 'CronJob' %}
+spec:
+  schedule: {{ schedule | quote }}
+  successfulJobsHistoryLimit: {{ successful_jobs_history | default(3) }}
+  failedJobsHistoryLimit: {{ failed_jobs_history | default(1) }}
+  concurrencyPolicy: {{ concurrency_policy | default('Allow') }}
+  jobTemplate:
+    spec:
+{% else %}
+spec:
+{% endif %}
+      completions: {{ completions | default(1) }}
+      parallelism: {{ parallelism | default(1) }}
+{% if backoff_limit is defined %}
+      backoffLimit: {{ backoff_limit }}
+{% endif %}
+{% if active_deadline_seconds is defined %}
+      activeDeadlineSeconds: {{ active_deadline_seconds }}
+{% endif %}
+      template:
+        metadata:
+          labels:
+            app: {{ name }}
+            type: job
+            managed-by: mini-idp
+        spec:
+          restartPolicy: {{ restart_policy | default('Never') }}
+          containers:
+          - name: {{ name }}
+            image: {{ image }}
+{% if command %}
+            command:
+{% for cmd in command %}
+            - {{ cmd | quote }}
+{% endfor %}
+{% endif %}
+{% if args %}
+            args:
+{% for arg in args %}
+            - {{ arg | quote }}
+{% endfor %}
+{% endif %}
+{% if env_vars %}
+            env:
+{% for env in env_vars %}
+            - name: {{ env.name }}
+{% if env.value %}
+              value: {{ env.value | quote }}
+{% elif env.secret %}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ env.secret }}
+                  key: {{ env.key | default(env.name) }}
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if resources %}
+            resources:
+{% if resources.requests %}
+              requests:
+{% for key, value in resources.requests.items() %}
+                {{ key }}: {{ value | quote }}
+{% endfor %}
+{% endif %}
+{% if resources.limits %}
+              limits:
+{% for key, value in resources.limits.items() %}
+                {{ key }}: {{ value | quote }}
+{% endfor %}
+{% endif %}
+{% endif %}
+          {% if restart_policy == 'OnFailure' %}
+          restartPolicy: OnFailure
+          {% endif %}
+
