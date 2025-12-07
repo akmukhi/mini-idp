@@ -148,10 +148,47 @@ resources = builder.build_worker(
 
 Templates generate multiple Kubernetes resources separated by `---`:
 
-1. **Deployment/Job** - Main workload
-2. **Service** - (Service template only) Exposes the deployment
-3. **HorizontalPodAutoscaler** - (If autoscaling enabled) Scales based on metrics
+1. **Deployment/Job/CronJob** - Main workload
+2. **Service** - (Service/Worker templates only) Exposes the deployment
+3. **HorizontalPodAutoscaler** - (If autoscaling enabled) Scales based on metrics with intelligent defaults
 4. **ServiceMonitor** - (If metrics enabled) Prometheus metrics collection
+5. **ExternalSecret** - (If external secrets specified) Syncs secrets from GCP Secret Manager
+
+## New Features
+
+### Automatic HPA Generation
+
+Templates automatically generate HPA resources with intelligent defaults:
+
+- **Services**: 70% CPU target, 3x max replicas multiplier
+- **Workers**: 60% CPU target, 2x max replicas multiplier
+- **Min Replicas**: Automatically calculated as 50% of initial replicas (minimum 1)
+- **Scaling Behavior**: Configured with scale-up and scale-down policies
+
+### Fluent Bit Logging
+
+All templates include automatic log collection:
+
+- Logs automatically collected by Fluent Bit
+- Forwarded to GCP Cloud Logging
+- Tagged with app name, namespace, and environment
+- Enabled by default
+
+### Prometheus Metrics
+
+Templates support automatic metrics collection:
+
+- ServiceMonitor resources generated automatically
+- Configurable metrics path, port, and interval
+- Standard Prometheus annotations added to pods
+
+### External Secrets
+
+Templates support external secret injection:
+
+- ExternalSecret resources generated automatically
+- Syncs from GCP Secret Manager
+- Automatic secret refresh at configured intervals
 
 ## Customization
 
