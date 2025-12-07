@@ -188,6 +188,11 @@ metadata:
   labels:
     app: {{ name }}
     managed-by: mini-idp
+{% if metrics_labels %}
+{% for key, value in metrics_labels.items() %}
+    {{ key }}: {{ value }}
+{% endfor %}
+{% endif %}
 spec:
   selector:
     matchLabels:
@@ -196,5 +201,17 @@ spec:
   - port: {{ metrics_port | default('http') }}
     path: {{ metrics_path | default('/metrics') }}
     interval: {{ metrics_interval | default('30s') }}
+{% if metrics_scheme %}
+    scheme: {{ metrics_scheme }}
+{% endif %}
+{% if metrics_tls_config %}
+    tlsConfig:
+{% if metrics_tls_config.insecureSkipVerify %}
+      insecureSkipVerify: {{ metrics_tls_config.insecureSkipVerify | lower }}
+{% endif %}
+{% endif %}
+{% if metrics_bearer_token_file %}
+    bearerTokenFile: {{ metrics_bearer_token_file }}
+{% endif %}
 {% endif %}
 

@@ -115,7 +115,7 @@ spec:
   - port: {{ port }}
     targetPort: {{ target_port | default(port) }}
     protocol: TCP
-    name: http
+    name: {{ metrics_port | default('http') }}
 {% endif %}
 {% if autoscaling %}
 ---

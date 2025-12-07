@@ -86,6 +86,9 @@ def _build_resources(
     cpu_target: Optional[int],
     memory_target: Optional[int],
     metrics: bool,
+    metrics_path: str = "/metrics",
+    metrics_port: Optional[str] = None,
+    metrics_interval: str = "30s",
 ) -> List[dict]:
     """
     Build Kubernetes resources from template.
@@ -127,6 +130,9 @@ def _build_resources(
             cpu_target=cpu_target,
             memory_target=memory_target,
             metrics=metrics,
+            metrics_path=metrics_path,
+            metrics_port=metrics_port,
+            metrics_interval=metrics_interval,
             logging_enabled=logging,
             logging_environment=logging_environment,
         )
@@ -154,6 +160,9 @@ def _build_resources(
             cpu_target=cpu_target,
             memory_target=memory_target,
             metrics=metrics,
+            metrics_path=metrics_path,
+            metrics_port=metrics_port,
+            metrics_interval=metrics_interval,
             logging_enabled=logging,
             logging_environment=logging_environment,
         )
@@ -425,6 +434,20 @@ def _deploy_gitops(
     help="Enable Prometheus metrics collection (default: enabled)",
 )
 @click.option(
+    "--metrics-path",
+    default="/metrics",
+    help="Metrics endpoint path (default: /metrics)",
+)
+@click.option(
+    "--metrics-port",
+    help="Metrics port name (default: uses service port or 'http')",
+)
+@click.option(
+    "--metrics-interval",
+    default="30s",
+    help="Prometheus scrape interval (default: 30s)",
+)
+@click.option(
     "--logging/--no-logging",
     default=True,
     help="Enable Fluent Bit log collection (default: enabled)",
@@ -469,6 +492,9 @@ def deploy(
     cpu_target,
     memory_target,
     metrics,
+    metrics_path,
+    metrics_port,
+    metrics_interval,
     logging,
     logging_environment,
     gitops,
@@ -517,6 +543,9 @@ def deploy(
     namespace = namespace or config.get("default_namespace", "default")
     kubeconfig = ctx.obj.get("kubeconfig") or config.get("kubeconfig")
 
+    # Auto-determine metrics port if not specified
+    final_metrics_port = metrics_port if metrics_port else "http"
+
     # Calculate automatic HPA defaults if autoscaling is enabled
     if autoscaling and type != "job":
         calculated_min, calculated_max = _calculate_hpa_defaults(
@@ -556,6 +585,9 @@ def deploy(
         cpu_target=final_cpu_target,
         memory_target=memory_target,
         metrics=metrics,
+        metrics_path=metrics_path,
+        metrics_port=final_metrics_port,
+        metrics_interval=metrics_interval,
         logging=logging,
         logging_environment=logging_environment,
     )
@@ -610,6 +642,9 @@ def _build_and_validate_resources(
     cpu_target: int,
     memory_target: Optional[int],
     metrics: bool,
+    metrics_path: str = "/metrics",
+    metrics_port: Optional[str] = None,
+    metrics_interval: str = "30s",
     logging: bool = True,
     logging_environment: Optional[str] = None,
 ) -> List[dict]:

@@ -258,9 +258,12 @@ See [Fluent Bit Integration Documentation](docs/fluent-bit-integration.md) for d
 
 ### Metrics
 
-- Prometheus metrics endpoint
-- Optional metrics sidecar
-- Pre-configured ServiceMonitors
+- **Automatic ServiceMonitor Generation**: Prometheus ServiceMonitor resources created automatically
+- **Configurable Endpoints**: Customize metrics path, port, and scrape interval
+- **Zero Configuration**: Works out of the box with `/metrics` endpoint
+- **Prometheus Integration**: Automatic discovery and scraping by Prometheus
+
+See [Prometheus Metrics Integration Documentation](docs/prometheus-metrics.md) for detailed information on metrics collection and configuration.
 
 ### Secrets
 
@@ -328,6 +331,7 @@ Pre-commit hooks automatically run:
 
 - [Automatic HPA Generation](docs/automatic-hpa.md) - How automatic HPA defaults work
 - [Fluent Bit Integration](docs/fluent-bit-integration.md) - Automatic log collection
+- [Prometheus Metrics Integration](docs/prometheus-metrics.md) - Automatic metrics collection
 - [GKE Infrastructure Setup](docs/gke-infrastructure.md) - Setting up GKE clusters
 - [Kubernetes Components Guide](docs/k8s-components.md) - ArgoCD, Prometheus, etc.
 - [Testing Guide](docs/k8s-components-testing.md) - Testing Kubernetes components
