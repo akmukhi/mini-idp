@@ -44,6 +44,15 @@ module = [
     "pulumi_kubernetes.helm.*",
     "setuptools.*",
     "yaml.*",
+    "kubernetes",
+    "kubernetes.*",
+    "kubernetes.client",
+    "kubernetes.client.*",
+    "kubernetes.client.rest",
+    "kubernetes.utils",
+    "kubernetes.utils.*",
+    "jinja2",
+    "jinja2.*",
 ]
 ignore_missing_imports = true
 
