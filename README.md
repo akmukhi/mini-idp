@@ -535,7 +535,5 @@ Inspired by the need for simplified Kubernetes deployments without the YAML comp
 
 For issues, questions, or contributions, please open an issue on GitHub.
 
----
 
-**Built with ❤️ using Python, Kubernetes, and Pulumi**
 
