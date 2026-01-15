@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, status
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from api.models import DeploymentRequest, DeploymentResponse, ErrorResponse
-from cli.config import load_config
+from cli.config import get_config
 from cli.commands.deploy import (
     _build_and_validate_resources,
     _calculate_hpa_defaults,
@@ -42,7 +42,7 @@ async def create_deployment(request: DeploymentRequest):
             )
 
         # Load configuration
-        config = load_config()
+        config = get_config()
 
         # Convert env vars and secrets to tuple format expected by CLI
         env_tuple = tuple(
